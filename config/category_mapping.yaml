@@ -1,0 +1,36 @@
+# カテゴリ自動分類パターン
+# campaign_name または ad_group_name に対して正規表現マッチを行う
+# マッチ順序: SCL → LC → LM → PL → SLW（SCLがLCに誤マッチしないよう先にチェック）
+auto_patterns:
+  SCL: "\\bSCL\\b"
+  LC: "\\bLC\\b|\\bFLC\\b"
+  LM: "\\bLM\\b"
+  PL: "\\bPL\\b"
+  SLW: "\\bSLW\\b"
+
+# 商品名→カテゴリマッピング（ショッピング広告の広告グループ名で判定）
+# category.xlsx から生成
+product_mapping:
+  LM110F: "LM"
+  LM110C: "LM"
+  LM110U: "LM"
+  LM100P: "LM"
+  LM140R: "LM"
+  LM110U3D: "LM"
+  HL650: "LC"
+  LC950: "LC"
+  FLC1500: "LC"
+  ELP: "LC"
+  PL950: "PL"
+  SCL2000CW: "SCL"
+  SCL800CW: "SCL"
+  SCL200: "SCL"
+  SLW2000: "SLW"
+  SLW1500: "SLW"
+  SLW700: "SLW"
+  SLW-ROBOT: "SLW"
+
+# 手動マッピング
+# campaign_id をキーにしてカテゴリを直接指定する
+# 自動分類より優先される
+manual_mapping: {}
