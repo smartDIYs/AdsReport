@@ -12,6 +12,38 @@ st.set_page_config(
     layout="wide",
 )
 
+
+def check_password():
+    """パスワード認証を行う。認証済みならTrueを返す。"""
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.markdown(
+        """
+        <div style="display:flex; justify-content:center; align-items:center; height:400px;">
+            <div style="text-align:center; width:350px;">
+                <h2>広告レポートダッシュボード</h2>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        password = st.text_input("パスワードを入力してください", type="password")
+        if st.button("ログイン", type="primary", use_container_width=True):
+            correct = st.secrets.get("APP_PASSWORD", "")
+            if password == correct:
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("パスワードが正しくありません。")
+    return False
+
+
+if not check_password():
+    st.stop()
+
 st.title("広告レポートダッシュボード")
 
 # サイドバー
