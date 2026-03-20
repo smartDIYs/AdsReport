@@ -1,9 +1,23 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+try:
+    import streamlit as st
+    _secrets = dict(st.secrets) if st.secrets else {}
+except Exception:
+    _secrets = {}
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+
+def _get_secret(key: str, default: str = "") -> str:
+    """st.secrets → 環境変数 → デフォルト値 の順に取得する"""
+    return _secrets.get(key, os.getenv(key, default))
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_DIR = BASE_DIR / "config"
@@ -65,32 +79,32 @@ REPORT_COLUMNS = [
 
 # Google Ads 認証情報
 GOOGLE_ADS_CONFIG = {
-    "developer_token": os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN", ""),
-    "client_id": os.getenv("GOOGLE_ADS_CLIENT_ID", ""),
-    "client_secret": os.getenv("GOOGLE_ADS_CLIENT_SECRET", ""),
-    "refresh_token": os.getenv("GOOGLE_ADS_REFRESH_TOKEN", ""),
-    "login_customer_id": os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID", ""),
+    "developer_token": _get_secret("GOOGLE_ADS_DEVELOPER_TOKEN"),
+    "client_id": _get_secret("GOOGLE_ADS_CLIENT_ID"),
+    "client_secret": _get_secret("GOOGLE_ADS_CLIENT_SECRET"),
+    "refresh_token": _get_secret("GOOGLE_ADS_REFRESH_TOKEN"),
+    "login_customer_id": _get_secret("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
     "use_proto_plus": True,
 }
 
 # Yahoo Ads 認証情報
 YAHOO_ADS_CONFIG = {
-    "client_id": os.getenv("YAHOO_ADS_CLIENT_ID", ""),
-    "client_secret": os.getenv("YAHOO_ADS_CLIENT_SECRET", ""),
-    "refresh_token": os.getenv("YAHOO_ADS_REFRESH_TOKEN", ""),
-    "account_id": os.getenv("YAHOO_ADS_ACCOUNT_ID", ""),
-    "mcc_account_id": os.getenv("YAHOO_ADS_MCC_ACCOUNT_ID", ""),
+    "client_id": _get_secret("YAHOO_ADS_CLIENT_ID"),
+    "client_secret": _get_secret("YAHOO_ADS_CLIENT_SECRET"),
+    "refresh_token": _get_secret("YAHOO_ADS_REFRESH_TOKEN"),
+    "account_id": _get_secret("YAHOO_ADS_ACCOUNT_ID"),
+    "mcc_account_id": _get_secret("YAHOO_ADS_MCC_ACCOUNT_ID"),
 }
 YAHOO_ADS_TOKEN_URL = "https://biz-oauth.yahoo.co.jp/oauth/v1/token"
 YAHOO_ADS_API_BASE = "https://ads-search.yahooapis.jp/api/v19/"
 
 # Microsoft Ads 認証情報
 MICROSOFT_ADS_CONFIG = {
-    "client_id": os.getenv("MICROSOFT_ADS_CLIENT_ID", ""),
-    "developer_token": os.getenv("MICROSOFT_ADS_DEVELOPER_TOKEN", ""),
-    "refresh_token": os.getenv("MICROSOFT_ADS_REFRESH_TOKEN", ""),
-    "account_id": os.getenv("MICROSOFT_ADS_ACCOUNT_ID", ""),
-    "customer_id": os.getenv("MICROSOFT_ADS_CUSTOMER_ID", ""),
+    "client_id": _get_secret("MICROSOFT_ADS_CLIENT_ID"),
+    "developer_token": _get_secret("MICROSOFT_ADS_DEVELOPER_TOKEN"),
+    "refresh_token": _get_secret("MICROSOFT_ADS_REFRESH_TOKEN"),
+    "account_id": _get_secret("MICROSOFT_ADS_ACCOUNT_ID"),
+    "customer_id": _get_secret("MICROSOFT_ADS_CUSTOMER_ID"),
 }
 
 # キャッシュTTL（秒）

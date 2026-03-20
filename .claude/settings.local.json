@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(pip install:*)",
+      "Bash(source /Users/yoshiya/Claude/AdsReport/.venv/bin/activate)",
+      "Bash(streamlit run:*)",
+      "Bash(python3 -u -c \":*)",
+      "Bash(pkill -f \"streamlit run\")",
+      "Bash(git init:*)",
+      "Bash(git remote:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
