@@ -33,8 +33,32 @@ class YahooAdsFetcher(AdsFetcherBase):
                 "refresh_token": self.config["refresh_token"],
             },
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            error = ""
+            try:
+                error = resp.json().get("error", "")
+            except Exception:
+                pass
+            if error == "invalid_grant":
+                raise RuntimeError(
+                    "Yahoo のリフレッシュトークンが失効しています。再認証が必要です。"
+                    "ローカルで `python scripts/generate_yahoo_token.py` を実行してトークンを再生成し、"
+                    "Streamlit Secrets（および .env）の YAHOO_ADS_REFRESH_TOKEN を更新してください。"
+                )
+            raise RuntimeError(
+                f"Yahoo のアクセストークン取得に失敗しました: {resp.status_code} {resp.text[:200]}"
+            )
         return resp.json()["access_token"]
+
+    @staticmethod
+    def _extract_error(result: dict) -> str:
+        """Yahoo API レスポンスからエラー理由を抽出する"""
+        values = result.get("rval", {}).get("values", [])
+        if values and values[0].get("errors"):
+            return str(values[0]["errors"])
+        if result.get("errors"):
+            return str(result["errors"])
+        return str(result)[:300]
 
     def _api_request(self, service: str, operation: str, payload: dict) -> dict:
         url = f"{YAHOO_ADS_API_BASE}{service}/{operation}"
@@ -95,7 +119,9 @@ class YahooAdsFetcher(AdsFetcherBase):
         result = self._api_request("ReportDefinitionService", "add", add_payload)
         values = result.get("rval", {}).get("values", [])
         if not values or not values[0].get("operationSucceeded"):
-            return self._empty_dataframe()
+            raise RuntimeError(
+                f"Yahoo のレポート作成リクエストに失敗しました: {self._extract_error(result)}"
+            )
 
         report_job_id = str(
             values[0]["reportDefinition"]["reportJobId"]
@@ -116,12 +142,14 @@ class YahooAdsFetcher(AdsFetcherBase):
                 if status == "COMPLETED":
                     break
                 if status == "FAILED":
-                    return self._empty_dataframe()
+                    raise RuntimeError(
+                        f"Yahoo のレポート生成がエラーになりました: {self._extract_error(result)}"
+                    )
             time.sleep(5)
             elapsed += 5
 
         if elapsed >= max_wait:
-            return self._empty_dataframe()
+            raise RuntimeError("Yahoo のレポート生成がタイムアウトしました（120秒）")
 
         # Step 3: ダウンロード
         csv_text = self._download_report(report_job_id)

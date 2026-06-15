@@ -30,8 +30,43 @@ class MicrosoftAdsFetcher(AdsFetcherBase):
                 "scope": SCOPE,
             },
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            error = ""
+            try:
+                error = resp.json().get("error", "")
+            except Exception:
+                pass
+            if error == "invalid_grant":
+                raise RuntimeError(
+                    "Microsoft のリフレッシュトークンが失効しています。再認証が必要です。"
+                    "ローカルで `python scripts/generate_microsoft_token.py` を実行してトークンを再生成し、"
+                    "Streamlit Secrets（および .env）の MICROSOFT_ADS_REFRESH_TOKEN を更新してください。"
+                )
+            raise RuntimeError(
+                f"Microsoft のアクセストークン取得に失敗しました: {resp.status_code} {resp.text[:200]}"
+            )
         return resp.json()["access_token"]
+
+    @staticmethod
+    def _extract(text: str, start_tag: str, end_tag: str):
+        """XML から start_tag と end_tag に挟まれた値を取り出す"""
+        start = text.find(start_tag)
+        if start == -1:
+            return None
+        start += len(start_tag)
+        end = text.find(end_tag, start)
+        if end == -1:
+            return None
+        return text[start:end]
+
+    @classmethod
+    def _extract_fault(cls, text: str) -> str:
+        """SOAP レスポンスからエラー理由を抽出する"""
+        for tag in ("faultstring", "Message", "ErrorCode"):
+            val = cls._extract(text, f"<{tag}>", f"</{tag}>")
+            if val:
+                return val
+        return text[:200]
 
     def _soap_request(self, body: str) -> str:
         """SOAP リクエストを送信する"""
@@ -81,16 +116,15 @@ class MicrosoftAdsFetcher(AdsFetcherBase):
             )
             text = resp.text
             if "<Status>Success</Status>" in text:
-                start = text.find("<ReportDownloadUrl>") + len("<ReportDownloadUrl>")
-                end = text.find("</ReportDownloadUrl>")
-                if start > 0 and end > start:
-                    return text[start:end]
-                return None
+                # レポート生成成功。URL が無い場合は対象期間にデータが無い（正常）
+                return self._extract(text, "<ReportDownloadUrl>", "</ReportDownloadUrl>")
             elif "<Status>Error</Status>" in text:
-                return None
+                raise RuntimeError(
+                    f"Microsoft のレポート生成がエラーになりました: {self._extract_fault(text)}"
+                )
             time.sleep(5)
             elapsed += 5
-        return None
+        raise RuntimeError("Microsoft のレポート生成がタイムアウトしました（120秒）")
 
     def fetch_campaign_report(
         self, start_date: date, end_date: date
@@ -158,16 +192,15 @@ class MicrosoftAdsFetcher(AdsFetcherBase):
         resp_text = self._soap_request(submit_body)
 
         # Extract ReportRequestId
-        start_tag = "<ReportRequestId>"
-        end_tag = "</ReportRequestId>"
-        start_idx = resp_text.find(start_tag)
-        if start_idx == -1:
-            return self._empty_dataframe()
-        start_idx += len(start_tag)
-        end_idx = resp_text.find(end_tag, start_idx)
-        report_request_id = resp_text[start_idx:end_idx]
+        report_request_id = self._extract(
+            resp_text, "<ReportRequestId>", "</ReportRequestId>"
+        )
+        if not report_request_id:
+            raise RuntimeError(
+                f"Microsoft のレポート作成リクエストに失敗しました: {self._extract_fault(resp_text)}"
+            )
 
-        # Poll and download
+        # Poll and download（URL が無い場合は対象期間にデータが無い＝正常）
         download_url = self._poll_report(report_request_id)
         if not download_url:
             return self._empty_dataframe()
