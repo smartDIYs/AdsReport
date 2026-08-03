@@ -1,4 +1,7 @@
+# 認証情報。バックアップ（.env.bak.YYYYMMDD 等）も含めて除外する
 .env
+.env.*
+!.env.example
 .streamlit/secrets.toml
 __pycache__/
 *.pyc
