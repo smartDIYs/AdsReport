@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
-from config.settings import CACHE_TTL
+from config.settings import CACHE_TTL, REPORT_COLUMNS
 from data.category_classifier import apply_categories
 from data.fetchers.google_ads import GoogleAdsFetcher
 from data.fetchers.microsoft_ads import MicrosoftAdsFetcher
@@ -11,12 +11,12 @@ from data.fetchers.yahoo_ads import YahooAdsFetcher
 
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)
-def fetch_all_platforms(
+def _fetch_raw(
     start_date: date,
     end_date: date,
     platforms: list[str],
 ) -> pd.DataFrame:
-    """選択されたプラットフォームからデータを取得し統合する"""
+    """各プラットフォームAPIから生データを取得して統合する（API通信のみキャッシュする）"""
     fetchers = {
         "Google": GoogleAdsFetcher,
         "Yahoo": YahooAdsFetcher,
@@ -37,10 +37,21 @@ def fetch_all_platforms(
             st.warning(f"{platform} Ads のデータ取得に失敗しました: {e}")
 
     if not dfs:
-        from config.settings import REPORT_COLUMNS
+        return pd.DataFrame(columns=REPORT_COLUMNS)
 
-        return pd.DataFrame(columns=REPORT_COLUMNS + ["category"])
+    return pd.concat(dfs, ignore_index=True)
 
-    combined = pd.concat(dfs, ignore_index=True)
-    combined = apply_categories(combined)
-    return combined
+
+def fetch_all_platforms(
+    start_date: date,
+    end_date: date,
+    platforms: list[str],
+) -> pd.DataFrame:
+    """選択されたプラットフォームからデータを取得し、カテゴリを付与して返す。
+
+    カテゴリ付与はキャッシュ対象外に置いている。キャッシュ済みの分類結果が
+    残ると category_mapping.yaml を更新しても反映されないため、分類だけは
+    毎回やり直す（対象は1か月あたり数千行程度で処理コストは無視できる）。
+    """
+    df = _fetch_raw(start_date, end_date, platforms).copy()
+    return apply_categories(df)
