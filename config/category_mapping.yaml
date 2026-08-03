@@ -1,12 +1,14 @@
 # カテゴリ自動分類パターン
 # campaign_name または ad_group_name に対して正規表現マッチを行う
 # マッチ順序: SCL → LC → LM → PL → SLW（SCLがLCに誤マッチしないよう先にチェック）
+# 各パターンは「型番形式（SCL500 のように直後が数字）」と
+# 「単独表記（G-Listing-SCL のように直後が区切り文字）」の両方を拾う
 auto_patterns:
-  SCL: "\\bSCL\\b"
-  LC: "\\bLC\\b|\\bFLC\\b"
-  LM: "\\bLM\\b"
-  PL: "\\bPL\\b"
-  SLW: "\\bSLW\\b"
+  SCL: "\\bSCL\\d|\\bSCL\\b"
+  LC: "\\bFLC\\d|\\bLC\\d|\\bFLC\\b|\\bLC\\b"
+  LM: "\\bLM\\d|\\bLM\\b"
+  PL: "\\bPL\\d|\\bPL\\b"
+  SLW: "\\bSLW\\d|\\bSLW\\b"
 
 # 商品名→カテゴリマッピング（ショッピング広告の広告グループ名で判定）
 # category.xlsx から生成
@@ -25,6 +27,8 @@ product_mapping:
   SCL2000CW: "SCL"
   SCL800CW: "SCL"
   SCL200: "SCL"
+  SCL6000CW: "SCL"
+  SCL500: "SCL"
   SLW2000: "SLW"
   SLW1500: "SLW"
   SLW700: "SLW"
